@@ -162,6 +162,7 @@ MonoBehaviour:
   baitSpeed: 10
   baitCooldown: 1
   baitSpawnOffset: 0.6
+  baitVerticalOffset: 0.3
 --- !u!212 &5628018141983903107
 SpriteRenderer:
   m_ObjectHideFlags: 0

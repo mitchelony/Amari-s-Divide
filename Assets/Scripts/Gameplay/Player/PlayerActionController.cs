@@ -13,6 +13,7 @@ public class PlayerActionController : MonoBehaviour
     [SerializeField] private float baitSpeed = 10f;
     [SerializeField] private float baitCooldown = 1.0f;
     [SerializeField] private float baitSpawnOffset = 0.6f;
+    [SerializeField] private float baitVerticalOffset = 0.3f;
 
     private Rigidbody2D rb;
     private PlayerStatus playerStatus;
@@ -130,7 +131,9 @@ public class PlayerActionController : MonoBehaviour
             return;
         }
 
-        Vector3 spawnPosition = transform.position + (Vector3)(facingDirection * baitSpawnOffset);
+        Vector2 spawnPosition = (Vector2)transform.position
+            + (facingDirection.normalized * baitSpawnOffset)
+            + (Vector2.up * baitVerticalOffset);
         GameObject instance = Instantiate(baitProjectilePrefab, spawnPosition, Quaternion.identity);
         BaitProjectile projectile = instance.GetComponent<BaitProjectile>();
         if (projectile != null)
