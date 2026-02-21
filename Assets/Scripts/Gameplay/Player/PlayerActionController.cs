@@ -1,0 +1,143 @@
+using System.Collections;
+using UnityEngine;
+
+public class PlayerActionController : MonoBehaviour
+{
+    [Header("Dash")]
+    [SerializeField] private float dashSpeed = 12f;
+    [SerializeField] private float dashDuration = 0.12f;
+    [SerializeField] private float dashCooldown = 1.0f;
+
+    [Header("Bait")]
+    [SerializeField] private GameObject baitProjectilePrefab;
+    [SerializeField] private float baitSpeed = 10f;
+    [SerializeField] private float baitCooldown = 1.0f;
+    [SerializeField] private float baitSpawnOffset = 0.6f;
+
+    private Rigidbody2D rb;
+    private PlayerStatus playerStatus;
+    private Behaviour movementController;
+    private Vector2 facingDirection = Vector2.down;
+    private float dashReadyTime;
+    private float baitReadyTime;
+    private bool isDashing;
+
+    public float DashCooldownRemaining => Mathf.Max(0f, dashReadyTime - Time.time);
+    public float BaitCooldownRemaining => Mathf.Max(0f, baitReadyTime - Time.time);
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        playerStatus = GetComponent<PlayerStatus>();
+        movementController = GetComponent("TopDownCharacterController") as Behaviour;
+    }
+
+    private void Update()
+    {
+        UpdateFacingDirection();
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            TryDash();
+        }
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            TryThrowBait();
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (isDashing && rb != null)
+        {
+            rb.linearVelocity = facingDirection * dashSpeed;
+        }
+    }
+
+    private void UpdateFacingDirection()
+    {
+        if (rb == null)
+        {
+            return;
+        }
+
+        Vector2 velocity = rb.linearVelocity;
+        if (velocity.sqrMagnitude > 0.0001f)
+        {
+            facingDirection = velocity.normalized;
+        }
+    }
+
+    private void TryDash()
+    {
+        if (isDashing || Time.time < dashReadyTime)
+        {
+            return;
+        }
+
+        StartCoroutine(DashRoutine());
+    }
+
+    private IEnumerator DashRoutine()
+    {
+        isDashing = true;
+        dashReadyTime = Time.time + dashCooldown;
+
+        if (movementController != null)
+        {
+            movementController.enabled = false;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < dashDuration)
+        {
+            elapsed += Time.deltaTime;
+            if (rb != null)
+            {
+                rb.linearVelocity = facingDirection * dashSpeed;
+            }
+            yield return null;
+        }
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+        }
+
+        if (movementController != null)
+        {
+            movementController.enabled = true;
+        }
+
+        isDashing = false;
+    }
+
+    private void TryThrowBait()
+    {
+        if (Time.time < baitReadyTime)
+        {
+            return;
+        }
+
+        if (playerStatus != null && playerStatus.IsMarked)
+        {
+            return;
+        }
+
+        if (baitProjectilePrefab == null)
+        {
+            return;
+        }
+
+        Vector3 spawnPosition = transform.position + (Vector3)(facingDirection * baitSpawnOffset);
+        GameObject instance = Instantiate(baitProjectilePrefab, spawnPosition, Quaternion.identity);
+        BaitProjectile projectile = instance.GetComponent<BaitProjectile>();
+        if (projectile != null)
+        {
+            projectile.Initialize(facingDirection, baitSpeed);
+        }
+
+        baitReadyTime = Time.time + baitCooldown;
+    }
+}
