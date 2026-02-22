@@ -60,7 +60,7 @@ public class BaitProjectile : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (TryMarkEnemy(collision.gameObject))
+        if (TryMarkEnemy(collision))
         {
             Destroy(gameObject);
             return;
@@ -72,26 +72,21 @@ public class BaitProjectile : MonoBehaviour
         }
     }
 
-    private bool TryMarkEnemy(GameObject target)
+    private bool TryMarkEnemy(Collision2D collision)
     {
-        Component markable = target.GetComponent("MarkableEnemy");
-        if (markable == null)
+        if (collision.collider == null)
         {
-            Transform current = target.transform.parent;
-            while (current != null && markable == null)
-            {
-                markable = current.GetComponent("MarkableEnemy");
-                current = current.parent;
-            }
+            return false;
         }
 
+        MarkableEnemy markable = collision.collider.GetComponentInParent<MarkableEnemy>();
         if (markable == null)
         {
             return false;
         }
 
-        Debug.Log($"Bait hit: {target.name}");
-        markable.SendMessage("Mark", SendMessageOptions.DontRequireReceiver);
+        Debug.Log($"Bait hit: {collision.collider.gameObject.name}");
+        markable.Mark();
         return true;
     }
 
