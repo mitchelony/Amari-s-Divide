@@ -9,10 +9,22 @@ namespace Cainos.PixelArtTopDown_Basic
         public float speed;
 
         private Animator animator;
+        private Rigidbody2D rb;
+        private Vector2 moveDirection;
+
+        private void Awake()
+        {
+            animator = GetComponent<Animator>();
+            rb = GetComponent<Rigidbody2D>();
+        }
 
         private void Start()
         {
-            animator = GetComponent<Animator>();
+            if (rb != null)
+            {
+                rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            }
         }
 
 
@@ -42,9 +54,16 @@ namespace Cainos.PixelArtTopDown_Basic
             }
 
             dir.Normalize();
+            moveDirection = dir;
             animator.SetBool("IsMoving", dir.magnitude > 0);
+        }
 
-            GetComponent<Rigidbody2D>().linearVelocity = speed * dir;
+        private void FixedUpdate()
+        {
+            if (rb != null)
+            {
+                rb.linearVelocity = speed * moveDirection;
+            }
         }
     }
 }

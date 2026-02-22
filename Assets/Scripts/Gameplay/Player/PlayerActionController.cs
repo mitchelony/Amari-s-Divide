@@ -1,8 +1,12 @@
 using System.Collections;
 using UnityEngine;
 
+[DisallowMultipleComponent]
 public class PlayerActionController : MonoBehaviour
 {
+    [Header("Collision Safety")]
+    [SerializeField] private bool enforceCollisionSafety = true;
+
     [Header("Dash")]
     [SerializeField] private float dashSpeed = 12f;
     [SerializeField] private float dashDuration = 0.12f;
@@ -28,9 +32,21 @@ public class PlayerActionController : MonoBehaviour
 
     private void Awake()
     {
+        PlayerActionController[] controllers = GetComponents<PlayerActionController>();
+        if (controllers.Length > 1 && controllers[0] != this)
+        {
+            enabled = false;
+            return;
+        }
+
         rb = GetComponent<Rigidbody2D>();
         playerStatus = GetComponent<PlayerStatus>();
         movementController = GetComponent("TopDownCharacterController") as Behaviour;
+
+        if (enforceCollisionSafety)
+        {
+            ConfigureCollisionSafety();
+        }
     }
 
     private void Update()
@@ -94,10 +110,6 @@ public class PlayerActionController : MonoBehaviour
         while (elapsed < dashDuration)
         {
             elapsed += Time.deltaTime;
-            if (rb != null)
-            {
-                rb.linearVelocity = facingDirection * dashSpeed;
-            }
             yield return null;
         }
 
@@ -142,5 +154,29 @@ public class PlayerActionController : MonoBehaviour
         }
 
         baitReadyTime = Time.time + baitCooldown;
+    }
+
+    private void ConfigureCollisionSafety()
+    {
+        if (rb != null)
+        {
+            rb.simulated = true;
+            rb.bodyType = RigidbodyType2D.Dynamic;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        }
+
+        Collider2D rootCollider = GetComponent<Collider2D>();
+        if (rootCollider != null)
+        {
+            rootCollider.isTrigger = false;
+            rootCollider.enabled = true;
+        }
+
+        int playerLayer = gameObject.layer;
+        for (int layer = 0; layer < 32; layer++)
+        {
+            Physics2D.IgnoreLayerCollision(playerLayer, layer, false);
+        }
     }
 }

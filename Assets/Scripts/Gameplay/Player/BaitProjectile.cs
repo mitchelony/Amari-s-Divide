@@ -6,6 +6,7 @@ public class BaitProjectile : MonoBehaviour
     [SerializeField] private float speed = 10f;
     [SerializeField] private float lifetime = 2f;
     [SerializeField] public float spinSpeed = 720f;
+    [SerializeField] private LayerMask wallLayers;
 
     private Vector2 moveDirection = Vector2.down;
     private float lifeRemaining;
@@ -14,6 +15,12 @@ public class BaitProjectile : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+
+        // Default to project wall layers: 20, 21, 22 ("Layer 1/2/3")
+        if (wallLayers.value == 0)
+        {
+            wallLayers = (1 << 20) | (1 << 21) | (1 << 22);
+        }
     }
 
     public void Initialize(Vector2 direction, float moveSpeed)
@@ -53,25 +60,61 @@ public class BaitProjectile : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.layer == 1)
+        if (TryMarkEnemy(collision.gameObject))
         {
             Destroy(gameObject);
             return;
         }
 
-        HandleHit(collision.gameObject);
+        if (IsWallCollision(collision))
+        {
+            Destroy(gameObject);
+        }
     }
 
-    private void HandleHit(GameObject target)
+    private bool TryMarkEnemy(GameObject target)
     {
         Component markable = target.GetComponent("MarkableEnemy");
         if (markable == null)
         {
-            return;
+            Transform current = target.transform.parent;
+            while (current != null && markable == null)
+            {
+                markable = current.GetComponent("MarkableEnemy");
+                current = current.parent;
+            }
+        }
+
+        if (markable == null)
+        {
+            return false;
         }
 
         Debug.Log($"Bait hit: {target.name}");
         markable.SendMessage("Mark", SendMessageOptions.DontRequireReceiver);
-        Destroy(gameObject);
+        return true;
+    }
+
+    private bool IsWallCollision(Collision2D collision)
+    {
+        GameObject hit = collision.collider != null ? collision.collider.gameObject : collision.gameObject;
+        if (IsInWallLayer(hit.layer))
+        {
+            return true;
+        }
+
+        Transform parent = hit.transform.parent;
+        if (parent != null && IsInWallLayer(parent.gameObject.layer))
+        {
+            return true;
+        }
+
+        Transform root = hit.transform.root;
+        return root != null && IsInWallLayer(root.gameObject.layer);
+    }
+
+    private bool IsInWallLayer(int layer)
+    {
+        return (wallLayers.value & (1 << layer)) != 0;
     }
 }
